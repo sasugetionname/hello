@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Googleアイコンを動かす</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: gray;
+            overflow: hidden;
+            position: relative;
+        }
+        #chrome-logo {
+            position: absolute;
+            width: 50px;
+            height: auto;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .apple-logo {
+            position: absolute;
+            width: 80px;
+            height: auto;
+            bottom: 50px;
+        }
+        #health {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: red;
+        }
+        #speed, #coin-count, #shard-count {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #speed { top: 40px; left: 10px; }
+        #coin-count { top: 10px; right: 10px; }
+        #shard-count { top: 40px; right: 10px; }
+        #upgrade-button, #health-upgrade-button {
+            position: absolute;
+            font-size: 18px;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #upgrade-button {
+            top: 70px; right: 10px;
+            background-color: blue; color: white;
+        }
+        #health-upgrade-button {
+            top: 110px; right: 10px;
+            background-color: green; color: white;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="health">Health: 5</div>
+    <div id="speed">Speed: 5 m/s</div>
+    <div id="coin-count">コイン: 0</div>
+    <div id="shard-count">欠片: 0</div>
+    <button id="upgrade-button">強化</button>
+    <button id="health-upgrade-button">体力+1 (欠片5消費)</button>
+
+    <img id="chrome-logo" src="https://ssl.gstatic.com/images/branding/product/1x/chrome_512dp.png" alt="Chrome Logo">
+    <img class="apple-logo" id="apple-logo1" src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple Logo">
+    <img class="apple-logo" id="apple-logo2" src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple Logo">
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const apple1 = document.getElementById("apple-logo1");
+            const apple2 = document.getElementById("apple-logo2");
+            const chromeLogo = document.getElementById("chrome-logo");
+            const healthDisplay = document.getElementById("health");
+            const speedDisplay = document.getElementById("speed");
+            const coinDisplay = document.getElementById("coin-count");
+            const shardDisplay = document.getElementById("shard-count");
+            const upgradeButton = document.getElementById("upgrade-button");
+            const healthUpgradeButton = document.getElementById("health-upgrade-button");
+
+            let baseHealth = parseInt(localStorage.getItem("baseHealth")) || 5;
+            let health = baseHealth;
+            let coins = 0;
+            let shards = parseInt(localStorage.getItem("shards")) || 0;
+            let appleSpeed = 5;
+            const groundY = 50;
+            let posX = window.innerWidth / 2;
+            let posY = groundY;
+            let velocityY = 0;
+            let isJumping = false;
+            const gravity = 0.5;
+            const jumpPower = 13;
+            let keys = {};
+
+            function updateDisplays() {
+                healthDisplay.textContent = `Health: ${health}`;
+                coinDisplay.textContent = `コイン: ${coins}`;
+                shardDisplay.textContent = `欠片: ${shards}`;
+            }
+
+            function resetApplePosition(apple) {
+                apple.style.left = `${window.innerWidth}px`;
+                apple.style.bottom = `${groundY}px`;
+            }
+
+            resetApplePosition(apple1);
+            resetApplePosition(apple2);
+
+            function moveApple(apple) {
+                let appleX = parseInt(apple.style.left, 10);
+                appleX -= appleSpeed;
+                if (appleX < -100) {
+                    resetApplePosition(apple);
+                } else {
+                    apple.style.left = `${appleX}px`;
+                }
+                checkCollision();
+                requestAnimationFrame(() => moveApple(apple));
+            }
+
+            moveApple(apple1);
+            setTimeout(() => moveApple(apple2), 1000);
+
+            setInterval(() => {
+                appleSpeed *= 1.1;
+                speedDisplay.textContent = `Speed: ${appleSpeed.toFixed(2)} m/s`;
+            }, 5000);
+
+            function moveChromeLogo() {
+                if (keys["ArrowLeft"]) posX -= 5;
+                if (keys["ArrowRight"]) posX += 5;
+
+                const maxX = window.innerWidth - chromeLogo.width;
+                const minX = 0;
+                posX = Math.max(minX, Math.min(maxX, posX));
+
+                if (keys["ArrowUp"] && !isJumping) {
+                    velocityY = jumpPower;
+                    isJumping = true;
+                }
+
+                posY += velocityY;
+                velocityY -= gravity;
+
+                if (posY <= groundY) {
+                    posY = groundY;
+                    velocityY = 0;
+                    isJumping = false;
+                }
+
+                chromeLogo.style.left = `${posX}px`;
+                chromeLogo.style.bottom = `${posY}px`;
+
+                requestAnimationFrame(moveChromeLogo);
+            }
+
+            document.addEventListener("keydown", (event) => {
+                keys[event.key] = true;
+            });
+
+            document.addEventListener("keyup", (event) => {
+                keys[event.key] = false;
+            });
+
+            moveChromeLogo();
+
+            function checkCollision() {
+                const chromeRect = chromeLogo.getBoundingClientRect();
+                const appleRect1 = apple1.getBoundingClientRect();
+                const appleRect2 = apple2.getBoundingClientRect();
+
+                if (
+                    chromeRect.left < appleRect1.right &&
+                    chromeRect.right > appleRect1.left &&
+                    chromeRect.top < appleRect1.bottom &&
+                    chromeRect.bottom > appleRect1.top
+                ) {
+                    health--;
+                    updateDisplays();
+                    resetApplePosition(apple1);
+                    checkGameOver();
+                }
+
+                if (
+                    chromeRect.left < appleRect2.right &&
+                    chromeRect.right > appleRect2.left &&
+                    chromeRect.top < appleRect2.bottom &&
+                    chromeRect.bottom > appleRect2.top
+                ) {
+                    health--;
+                    updateDisplays();
+                    resetApplePosition(apple2);
+                    checkGameOver();
+                }
+            }
+
+            function checkGameOver() {
+                if (health <= 0) {
+                    alert("ゲームオーバー！");
+                    coins = 0;
+                    updateDisplays();
+                }
+            }
+
+            setInterval(() => {
+                coins++;
+                updateDisplays();
+            }, 1000);
+
+            setInterval(() => {
+                shards++;
+                localStorage.setItem("shards", shards);
+                updateDisplays();
+            }, 10000);
+
+            upgradeButton.addEventListener("click", () => {
+                healthUpgradeButton.style.display = healthUpgradeButton.style.display === "none" ? "block" : "none";
+            });
+
+            healthUpgradeButton.addEventListener("click", () => {
+                if (shards >= 5) {
+                    shards -= 5;
+                    baseHealth++;
+                    health = baseHealth;
+                    updateDisplays();
+                    localStorage.setItem("shards", shards);
+                    localStorage.setItem("baseHealth", baseHealth);
+                } else {
+                    alert("欠片が足りません！");
+                }
+            });
+
+            updateDisplays();
+        });
+    </script>
+</body>
+</html>
